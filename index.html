@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Quadra Way — Database Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Manrope:wght@400;500;600;700&display=swap');
+
+  :root{
+    --navy-deep:#0a1830;
+    --navy-header:#0e355c;
+    --navy-header-2:#123f6b;
+    --gold:#e8a857;
+    --gold-deep:#c9873a;
+    --gold-bright:#ffcb84;
+    --turquoise:#2ec4b6;
+    --turquoise-deep:#1c9e92;
+    --sand-glass:rgba(247,235,208,0.14);
+    --cyan-glass:rgba(186,232,232,0.13);
+    --card-border:rgba(255,255,255,0.35);
+    --text-white:#ffffff;
+    --text-soft:rgba(255,255,255,0.72);
+    --text-dim:rgba(255,255,255,0.5);
+  }
+
+  *{box-sizing:border-box;}
+
+  html,body{
+    margin:0;
+    padding:0;
+    background:#050c18;
+    font-family:'Manrope',sans-serif;
+    color:var(--text-white);
+    overflow-x:auto;
+  }
+
+  /* ===================== BACKGROUND SCENE ===================== */
+  .scene-bg{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    overflow:hidden;
+  }
+  .sky{
+    position:absolute;
+    inset:0;
+    background:linear-gradient(180deg,
+      #0a1226 0%,
+      #14203f 14%,
+      #2c2a4d 28%,
+      #6a4a5f 42%,
+      #b5674c 58%,
+      #e6a154 72%,
+      #f6cd8f 82%,
+      #f9dca3 100%);
+    filter:blur(2px);
+  }
+  .sun{
+    position:absolute;
+    left:50%;
+    top:60%;
+    width:520px;
+    height:520px;
+    transform:translate(-50%,-50%);
+    border-radius:50%;
+    background:radial-gradient(circle,
+      rgba(255,236,190,0.95) 0%,
+      rgba(255,203,132,0.75) 22%,
+      rgba(232,168,87,0.35) 45%,
+      rgba(232,168,87,0.0) 70%);
+    filter:blur(6px);
+  }
+  .pyramids{
+    position:absolute;
+    left:0; right:0;
+    bottom:30%;
+    height:34%;
+    filter:blur(2.5px) saturate(0.9);
+    opacity:0.85;
+  }
+  .dunes{
+    position:absolute;
+    left:0;right:0;bottom:22%;
+    height:16%;
+    filter:blur(3px);
+    opacity:0.9;
+  }
+  .water{
+    position:absolute;
+    left:0;right:0;bottom:0;
+    height:32%;
+    background:linear-gradient(180deg,
+      rgba(20,60,70,0.0) 0%,
+      #123f4a 12%,
+      #0e5f66 38%,
+      #157f7a 62%,
+      #1fa89a 100%);
+    filter:blur(1.5px);
+  }
+  .water-glow{
+    position:absolute;
+    left:50%;
+    bottom:0;
+    width:220px;
+    height:32%;
+    transform:translateX(-50%);
+    background:linear-gradient(180deg, rgba(255,214,150,0.55), rgba(255,180,110,0.08) 70%, transparent);
+    filter:blur(10px);
+    mix-blend-mode:screen;
+  }
+  .bokeh{
+    position:absolute;
+    border-radius:50%;
+    filter:blur(6px);
+    mix-blend-mode:screen;
+    opacity:0.55;
+  }
+  .grain{
+    position:absolute;
+    inset:0;
+    opacity:0.05;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+  .vignette{
+    position:absolute;
+    inset:0;
+    background:radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0) 40%, rgba(4,8,16,0.55) 100%);
+  }
+
+  /* ===================== HEADER ===================== */
+  .page{
+    position:relative;
+    z-index:1;
+    min-height:100vh;
+    padding:56px 40px 120px;
+  }
+  .brand{
+    text-align:center;
+    margin-bottom:10px;
+  }
+  .brand-mark{
+    display:inline-flex;
+    align-items:center;
+    gap:14px;
+    margin-bottom:6px;
+  }
+  .brand-glyph{
+    width:34px;height:34px;
+    border:1.5px solid var(--gold);
+    transform:rotate(45deg);
+    position:relative;
+  }
+  .brand-glyph::after{
+    content:'';
+    position:absolute;
+    inset:6px;
+    border:1px solid var(--turquoise);
+  }
+  h1{
+    font-family:'Cinzel',serif;
+    font-weight:600;
+    font-size:46px;
+    letter-spacing:2px;
+    margin:0;
+    background:linear-gradient(180deg,#fff5e2,var(--gold-bright) 60%,var(--gold-deep));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    text-shadow:0 0 40px rgba(232,168,87,0.35);
+  }
+  .subtitle{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:20px;
+    color:var(--text-soft);
+    margin:8px 0 0;
+    letter-spacing:0.5px;
+  }
+  .divider{
+    width:220px;
+    height:1px;
+    margin:22px auto 0;
+    background:linear-gradient(90deg,transparent,var(--gold),var(--turquoise),transparent);
+  }
+  .legend{
+    display:flex;
+    justify-content:center;
+    gap:28px;
+    margin-top:22px;
+    flex-wrap:wrap;
+    font-size:12.5px;
+    color:var(--text-soft);
+  }
+  .legend span{display:inline-flex;align-items:center;gap:7px;}
+  .dot{width:9px;height:9px;border-radius:2px;display:inline-block;}
+  .dot.pk{background:var(--navy-header);border:1px solid #6fb3e8;box-shadow:0 0 6px #4d8fd4;}
+  .dot.fk{background:transparent;border:1px solid var(--gold);box-shadow:0 0 6px var(--gold);}
+  .dot.line{width:16px;height:2px;border-radius:2px;background:var(--gold);box-shadow:0 0 6px var(--gold);}
+
+  /* ===================== STAGE / ISOMETRIC WRAPPER ===================== */
+  .stage-outer{
+    margin-top:50px;
+    perspective:2600px;
+    display:flex;
+    justify-content:center;
+  }
+  .stage{
+    position:relative;
+    width:1760px;
+    height:920px;
+    transform:rotateX(11deg) rotateY(-5deg);
+    transform-style:preserve-3d;
+  }
+
+  .island-label{
+    position:absolute;
+    font-family:'Cormorant Garamond',serif;
+    font-size:15px;
+    letter-spacing:3px;
+    color:var(--turquoise);
+    text-shadow:0 0 10px rgba(46,196,182,0.6);
+    padding-bottom:6px;
+    border-bottom:1px solid rgba(46,196,182,0.35);
+  }
+
+  svg.connectors{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    overflow:visible;
+    pointer-events:none;
+  }
+
+  /* ===================== CARDS ===================== */
+  .card{
+    position:absolute;
+    width:260px;
+    background:linear-gradient(155deg, var(--sand-glass), var(--cyan-glass));
+    border:1px solid var(--card-border);
+    border-radius:18px;
+    backdrop-filter:blur(14px) saturate(140%);
+    -webkit-backdrop-filter:blur(14px) saturate(140%);
+    box-shadow:
+      0 30px 40px -18px rgba(0,0,0,0.55),
+      0 0 0 1px rgba(255,255,255,0.04) inset,
+      0 1px 0 rgba(255,255,255,0.5) inset;
+    opacity:0;
+    animation:rise 0.7s ease forwards;
+    animation-delay:calc(var(--i) * 70ms);
+  }
+  @keyframes rise{
+    from{opacity:0; transform:translateY(26px) translateZ(0);}
+    to{opacity:1; transform:translateY(0) translateZ(0);}
+  }
+  .card.hub{
+    box-shadow:
+      0 34px 46px -16px rgba(0,0,0,0.6),
+      0 0 46px rgba(232,168,87,0.25),
+      0 1px 0 rgba(255,255,255,0.55) inset;
+  }
+  .card-header{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:600;
+    font-size:20px;
+    letter-spacing:0.6px;
+    color:var(--text-white);
+    padding:12px 18px;
+    border-radius:18px 18px 0 0;
+    background:linear-gradient(120deg, var(--navy-header), var(--navy-header-2));
+    border-bottom:1px solid rgba(255,255,255,0.18);
+    display:flex;
+    align-items:center;
+    gap:9px;
+    text-shadow:0 1px 3px rgba(0,0,0,0.4);
+  }
+  .card-header svg{flex:0 0 auto;}
+  .card-body{
+    padding:10px 0 12px;
+  }
+  .field{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:3px 18px;
+    height:24px;
+    font-size:12.5px;
+    color:var(--text-soft);
+    white-space:nowrap;
+  }
+  .field .fname{
+    color:var(--text-white);
+    font-weight:600;
+    flex:0 0 auto;
+  }
+  .field .ftype{
+    color:var(--text-dim);
+    font-weight:400;
+    font-size:11px;
+    margin-left:auto;
+    padding-left:10px;
+  }
+  .badge{
+    flex:0 0 auto;
+    font-size:9px;
+    font-weight:700;
+    letter-spacing:0.4px;
+    width:26px;
+    text-align:center;
+    padding:2px 0;
+    border-radius:5px;
+  }
+  .badge.pk{
+    background:linear-gradient(160deg,#1c5c92,#0e355c);
+    color:#bfe0ff;
+    box-shadow:0 0 8px rgba(79,150,220,0.55), inset 0 0 0 1px rgba(255,255,255,0.15);
+  }
+  .badge.fk{
+    background:transparent;
+    color:var(--gold);
+    border:1px solid var(--gold);
+    box-shadow:0 0 7px rgba(232,168,87,0.55);
+  }
+  .badge.none{visibility:hidden;}
+  .field.pk-row{
+    background:linear-gradient(90deg, rgba(79,150,220,0.14), transparent 80%);
+    border-top:1px solid rgba(255,255,255,0.08);
+    border-bottom:1px solid rgba(255,255,255,0.08);
+  }
+  .field.fk-row .fname{color:#ffe3bd;}
+  .field.computed .fname{font-style:italic; color:#c9f5ee;}
+  .field.computed .badge{color:var(--turquoise); border:1px dashed var(--turquoise); box-shadow:0 0 7px rgba(46,196,182,0.5);}
+
+  footer{
+    position:relative;
+    z-index:1;
+    text-align:center;
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    color:var(--text-dim);
+    font-size:13px;
+    padding-bottom:30px;
+  }
+
+  /* ===================== INTERACTIVITY ===================== */
+  .card{
+    transition:box-shadow .45s ease, opacity .45s ease, filter .45s ease, transform .45s ease;
+  }
+  .card-header, .field.pk-row, .field.fk-row{
+    cursor:pointer;
+  }
+  .card-header:hover{
+    filter:brightness(1.12);
+  }
+  .field.pk-row:hover, .field.fk-row:hover{
+    background:rgba(255,255,255,0.08);
+  }
+
+  .card.is-dim{
+    opacity:0.3 !important;
+    filter:saturate(0.45) brightness(0.72);
+    transform:translateY(0) scale(0.99);
+  }
+  .card.is-connected{
+    opacity:1;
+    box-shadow:
+      0 0 0 1.5px rgba(255,255,255,0.45),
+      0 0 34px 4px rgba(46,196,182,0.5),
+      0 30px 40px -18px rgba(0,0,0,0.55);
+  }
+  .card.is-active{
+    opacity:1;
+    transform:translateY(-6px);
+    animation:cardPulse 1.7s ease-in-out infinite;
+  }
+  @keyframes cardPulse{
+    0%,100%{
+      box-shadow:
+        0 0 0 2px rgba(255,255,255,0.55),
+        0 0 42px 6px rgba(232,168,87,0.55),
+        0 34px 46px -16px rgba(0,0,0,0.6);
+    }
+    50%{
+      box-shadow:
+        0 0 0 2px rgba(255,255,255,0.8),
+        0 0 74px 18px rgba(232,168,87,0.9),
+        0 34px 46px -16px rgba(0,0,0,0.6);
+    }
+  }
+
+  .connectors path{
+    transition:opacity .45s ease, stroke-width .45s ease;
+  }
+  .connectors path.is-dim-line{
+    opacity:0.07 !important;
+  }
+  .connectors path.is-active-line{
+    opacity:1 !important;
+    stroke-width:3.2;
+    stroke-dasharray:9 7;
+    animation:flowLine 0.9s linear infinite;
+  }
+  @keyframes flowLine{
+    to{ stroke-dashoffset:-32; }
+  }
+
+  .field.field-highlight{
+    border-radius:7px;
+    background:linear-gradient(90deg, rgba(255,205,140,0.32), rgba(255,205,140,0.04) 88%) !important;
+    animation:fieldPulse 1.3s ease-in-out infinite;
+  }
+  @keyframes fieldPulse{
+    0%,100%{ box-shadow:inset 0 0 0 1px rgba(232,168,87,0.35); }
+    50%{ box-shadow:inset 0 0 0 1px rgba(255,219,163,0.95), 0 0 16px rgba(232,168,87,0.55); }
+  }
+  .field.field-highlight .badge.pk{
+    box-shadow:0 0 16px #8ec4f2, inset 0 0 0 1px rgba(255,255,255,0.5);
+  }
+  .field.field-highlight .badge.fk{
+    box-shadow:0 0 16px var(--gold-bright);
+    background:rgba(232,168,87,0.3);
+  }
+  .field.field-highlight .fname{
+    color:#fff2dc;
+  }
+</style>
+</head>
+<body>
+
+<div class="scene-bg">
+  <div class="sky"></div>
+  <div class="sun"></div>
+
+  <svg class="pyramids" viewBox="0 0 1600 300" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="150,300 330,90 520,300" fill="#2a2440" opacity="0.9"/>
+    <polygon points="330,300 470,140 640,300" fill="#241f38" opacity="0.85"/>
+    <polygon points="900,300 1080,60 1300,300" fill="#26213c" opacity="0.9"/>
+    <polygon points="1060,300 1180,150 1330,300" fill="#221d34" opacity="0.8"/>
+    <polygon points="150,300 330,90 260,300" fill="#3a3050" opacity="0.5"/>
+    <polygon points="900,300 1080,60 1010,300" fill="#3c3252" opacity="0.5"/>
+  </svg>
+
+  <svg class="dunes" viewBox="0 0 1600 160" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,160 Q200,90 420,120 T800,110 T1200,130 T1600,100 L1600,160 Z" fill="#1c1830" opacity="0.75"/>
+  </svg>
+
+  <div class="water"></div>
+  <div class="water-glow"></div>
+
+  <div class="bokeh" style="left:12%;top:22%;width:60px;height:60px;background:radial-gradient(circle,#ffe6bf,transparent 70%);"></div>
+  <div class="bokeh" style="left:80%;top:30%;width:90px;height:90px;background:radial-gradient(circle,#ffd39c,transparent 70%);"></div>
+  <div class="bokeh" style="left:65%;top:15%;width:40px;height:40px;background:radial-gradient(circle,#fff3d6,transparent 70%);"></div>
+  <div class="bokeh" style="left:25%;top:12%;width:30px;height:30px;background:radial-gradient(circle,#aef0e8,transparent 70%);"></div>
+  <div class="bokeh" style="left:92%;top:60%;width:70px;height:70px;background:radial-gradient(circle,#7fe0d2,transparent 70%);"></div>
+
+  <div class="grain"></div>
+  <div class="vignette"></div>
+</div>
+
+<div class="page">
+
+  <div class="brand">
+    <div class="brand-mark">
+      <div class="brand-glyph"></div>
+    </div>
+    <h1>QUADRA WAY</h1>
+    <p class="subtitle">Entity Relationship Diagram — Reservations &amp; Branch Operations</p>
+    <div class="divider"></div>
+    <div class="legend">
+      <span><i class="dot pk"></i> Primary Key</span>
+      <span><i class="dot fk"></i> Foreign Key</span>
+      <span><i class="dot line"></i> Relationship</span>
+    </div>
+  </div>
+
+  <div class="stage-outer">
+    <div class="stage" id="stage">
+
+      <div class="island-label" style="left:40px; top:10px;">SALES &amp; BOOKINGS</div>
+      <div class="island-label" style="left:1440px; top:10px;">BRANCH OPERATIONS</div>
+
+      <svg class="connectors" id="connectors"></svg>
+
+      <!-- ============ CARDS ============ -->
+
+      <div class="card" id="c-Tourists" style="left:40px; top:60px; --i:0;">
+        <div class="card-header">◆ Tourists</div>
+        <div class="card-body">
+          <div class="field pk-row"><span class="badge pk">PK</span><span class="fname">Tourist_ID</span><span class="ftype">VARCHAR(50)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">FullName</span><span class="ftype">NVARCHAR(200)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">PhoneNumber</span><span class="ftype">UNIQUE</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Email</span><span class="ftype">UNIQUE</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Nationality</span><span class="ftype">NVARCHAR(100)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Gender</span><span class="ftype">M / F</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Age</span><span class="ftype">INT</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Date_Of_Birth</span><span class="ftype">DATE</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">ID_Number</span><span class="ftype">UNIQUE</span></div>
+        </div>
+      </div>
+
+      <div class="card" id="c-Transport" style="left:40px; top:420px; --i:1;">
+        <div class="card-header">◆ Transport</div>
+        <div class="card-body">
+          <div class="field pk-row"><span class="badge pk">PK</span><span class="fname">Transport_ID</span><span class="ftype">VARCHAR(50)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Type</span><span class="ftype">VARCHAR(100)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Provider_Name</span><span class="ftype">VARCHAR(200)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Cost_Per_Seat</span><span class="ftype">DECIMAL(10,2)</span></div>
+        </div>
+      </div>
+
+      <div class="card" id="c-Hotels" style="left:380px; top:60px; --i:2;">
+        <div class="card-header">◆ Hotels</div>
+        <div class="card-body">
+          <div class="field pk-row"><span class="badge pk">PK</span><span class="fname">Hotel_ID</span><span class="ftype">VARCHAR(50)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Hotel_Name</span><span class="ftype">VARCHAR(200)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">City</span><span class="ftype">VARCHAR(100)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Address</span><span class="ftype">VARCHAR(200)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Star_Rating</span><span class="ftype">DECIMAL(3,2)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Price_Per_Night</span><span class="ftype">DECIMAL(10,2)</span></div>
+        </div>
+      </div>
+
+      <div class="card" id="c-Tour_Package" style="left:380px; top:340px; --i:3;">
+        <div class="card-header">◆ Tour_Package</div>
+        <div class="card-body">
+          <div class="field pk-row"><span class="badge pk">PK</span><span class="fname">Package_ID</span><span class="ftype">VARCHAR(50)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Price</span><span class="ftype">DECIMAL(10,2)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Duration_Days</span><span class="ftype">INT</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Origin</span><span class="ftype">VARCHAR(100)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Destination</span><span class="ftype">VARCHAR(100)</span></div>
+        </div>
+      </div>
+
+      <div class="card hub" id="c-Booking" style="left:720px; top:200px; --i:4;">
+        <div class="card-header">✦ Booking</div>
+        <div class="card-body">
+          <div class="field"><span class="badge none">•</span><span class="fname">Booking_ID</span><span class="ftype">VARCHAR(50)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Booking_Date</span><span class="ftype">DATE</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Booking_Channel</span><span class="ftype">ENUM</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Payment_Method</span><span class="ftype">ENUM</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Payment_Status</span><span class="ftype">ENUM</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Cost</span><span class="ftype">DECIMAL(10,2)</span></div>
+          <div class="field fk-row" data-ref="c-Tourists"><span class="badge fk">FK</span><span class="fname">Tourist_ID</span><span class="ftype">→ Tourists</span></div>
+          <div class="field fk-row" data-ref="c-Tour_Package"><span class="badge fk">FK</span><span class="fname">Package_ID</span><span class="ftype">→ Tour_Package</span></div>
+          <div class="field fk-row" data-ref="c-Transport"><span class="badge fk">FK</span><span class="fname">Transport_ID</span><span class="ftype">→ Transport</span></div>
+          <div class="field fk-row" data-ref="c-Hotels"><span class="badge fk">FK</span><span class="fname">Hotel_ID</span><span class="ftype">→ Hotels</span></div>
+          <div class="field computed"><span class="badge">∑</span><span class="fname">Final_Price</span><span class="ftype">Cost × 1.10</span></div>
+        </div>
+      </div>
+
+      <div class="card" id="c-Reviews" style="left:1060px; top:60px; --i:5;">
+        <div class="card-header">◆ Reviews</div>
+        <div class="card-body">
+          <div class="field"><span class="badge none">•</span><span class="fname">ID</span><span class="ftype">VARCHAR(50)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Rating</span><span class="ftype">DECIMAL(3,2)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Comment</span><span class="ftype">NVARCHAR(500)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Date</span><span class="ftype">DATE</span></div>
+          <div class="field fk-row" data-ref="c-Tourists"><span class="badge fk">FK</span><span class="fname">Tourist_ID</span><span class="ftype">→ Tourists</span></div>
+          <div class="field fk-row" data-ref="c-Tour_Package"><span class="badge fk">FK</span><span class="fname">Package_ID</span><span class="ftype">→ Tour_Package</span></div>
+        </div>
+      </div>
+
+      <div class="card" id="c-Activities" style="left:1060px; top:340px; --i:6;">
+        <div class="card-header">◆ Activities</div>
+        <div class="card-body">
+          <div class="field"><span class="badge none">•</span><span class="fname">Act_ID</span><span class="ftype">VARCHAR(50)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Description</span><span class="ftype">NVARCHAR(MAX)</span></div>
+          <div class="field fk-row" data-ref="c-Tour_Package"><span class="badge fk">FK</span><span class="fname">Package_ID</span><span class="ftype">→ Tour_Package</span></div>
+        </div>
+      </div>
+
+      <div class="card" id="c-Branches" style="left:1440px; top:60px; --i:7;">
+        <div class="card-header">◆ Branches</div>
+        <div class="card-body">
+          <div class="field pk-row"><span class="badge pk">PK</span><span class="fname">Branch_ID</span><span class="ftype">VARCHAR(50)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Branch_City</span><span class="ftype">VARCHAR(100)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Location</span><span class="ftype">VARCHAR(200)</span></div>
+          <div class="field fk-row" data-ref="c-Employees"><span class="badge fk">FK</span><span class="fname">Branch_Manager</span><span class="ftype">→ Employees</span></div>
+        </div>
+      </div>
+
+      <div class="card" id="c-Employees" style="left:1440px; top:320px; --i:8;">
+        <div class="card-header">◆ Employees</div>
+        <div class="card-body">
+          <div class="field pk-row"><span class="badge pk">PK</span><span class="fname">Employee_ID</span><span class="ftype">VARCHAR(50)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Name</span><span class="ftype">VARCHAR(200)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">PhoneNumber</span><span class="ftype">UNIQUE</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Email</span><span class="ftype">UNIQUE</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Job_Title</span><span class="ftype">VARCHAR(100)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Salary</span><span class="ftype">DECIMAL(10,2)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Hire_Date</span><span class="ftype">DATE</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Address</span><span class="ftype">VARCHAR(200)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Gender</span><span class="ftype">M / F</span></div>
+          <div class="field fk-row" data-ref="c-Branches"><span class="badge fk">FK</span><span class="fname">Branch_ID</span><span class="ftype">→ Branches</span></div>
+        </div>
+      </div>
+
+      <div class="card" id="c-Employee_Language" style="left:1440px; top:720px; --i:9;">
+        <div class="card-header">◆ Employee_Language</div>
+        <div class="card-body">
+          <div class="field"><span class="badge none">•</span><span class="fname">ID</span><span class="ftype">VARCHAR(50)</span></div>
+          <div class="field"><span class="badge none">•</span><span class="fname">Language_Name</span><span class="ftype">VARCHAR(50)</span></div>
+          <div class="field fk-row" data-ref="c-Employees"><span class="badge fk">FK</span><span class="fname">Employee_ID</span><span class="ftype">→ Employees</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>Quadra Way · Database Architecture Overview</footer>
+
+</div>
+
+<script>
+  // Compute geometry from the DOM (left/top come from inline styles above)
+  const rels = [
+    {from:'c-Booking', to:'c-Tourists'},
+    {from:'c-Booking', to:'c-Tour_Package'},
+    {from:'c-Booking', to:'c-Transport'},
+    {from:'c-Booking', to:'c-Hotels'},
+    {from:'c-Reviews', to:'c-Tourists'},
+    {from:'c-Reviews', to:'c-Tour_Package'},
+    {from:'c-Activities', to:'c-Tour_Package'},
+    {from:'c-Employees', to:'c-Branches'},
+    {from:'c-Branches', to:'c-Employees'},
+    {from:'c-Employee_Language', to:'c-Employees'},
+  ];
+
+  function rectOf(id){
+    const el = document.getElementById(id);
+    const left = parseFloat(el.style.left);
+    const top = parseFloat(el.style.top);
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    return {left, top, w, h, cx:left+w/2, cy:top+h/2};
+  }
+
+  function edgePoint(rect, towardCx, towardCy){
+    // Return the point on the rect's border closest to direction of the other center
+    const dx = towardCx - rect.cx;
+    const dy = towardCy - rect.cy;
+    const halfW = rect.w/2, halfH = rect.h/2;
+    let x, y;
+    if (Math.abs(dx) * halfH > Math.abs(dy) * halfW) {
+      // exits left/right side
+      x = rect.cx + (dx > 0 ? halfW : -halfW);
+      y = rect.cy + dy * (halfW / Math.abs(dx || 1));
+      y = Math.max(rect.top+14, Math.min(rect.top+rect.h-14, y));
+    } else {
+      x = rect.cx + dx * (halfH / Math.abs(dy || 1));
+      y = rect.cy + (dy > 0 ? halfH : -halfH);
+      x = Math.max(rect.left+14, Math.min(rect.left+rect.w-14, x));
+    }
+    return {x, y};
+  }
+
+  function draw(){
+    const svg = document.getElementById('connectors');
+    svg.innerHTML = `
+      <defs>
+        <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="3.2" result="blur"/>
+          <feMerge>
+            <feMergeNode in="blur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+        <marker id="dotPK" markerWidth="10" markerHeight="10" refX="5" refY="5">
+          <circle cx="5" cy="5" r="4" fill="#0e355c" stroke="#8ec4f2" stroke-width="1.4"/>
+        </marker>
+        <marker id="dotFK" markerWidth="10" markerHeight="10" refX="5" refY="5">
+          <circle cx="5" cy="5" r="3.4" fill="#e8a857" />
+        </marker>
+      </defs>
+    `;
+
+    rels.forEach((r, i) => {
+      const a = rectOf(r.from);
+      const b = rectOf(r.to);
+      const p1 = edgePoint(a, b.cx, b.cy);
+      const p2 = edgePoint(b, a.cx, a.cy);
+      const midx = (p1.x+p2.x)/2;
+      const midy = (p1.y+p2.y)/2;
+      // perpendicular offset for a gentle curve
+      const dx = p2.x-p1.x, dy = p2.y-p1.y;
+      const len = Math.sqrt(dx*dx+dy*dy) || 1;
+      const nx = -dy/len, ny = dx/len;
+      const bend = Math.min(60, len*0.18);
+      const cx = midx + nx*bend;
+      const cy = midy + ny*bend;
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d', `M ${p1.x} ${p1.y} Q ${cx} ${cy} ${p2.x} ${p2.y}`);
+      path.setAttribute('fill','none');
+      path.setAttribute('stroke','url(#lineGrad)');
+      path.setAttribute('stroke-width','2');
+      path.setAttribute('filter','url(#glow)');
+      path.setAttribute('marker-start','url(#dotFK)');
+      path.setAttribute('marker-end','url(#dotPK)');
+      path.setAttribute('opacity','0');
+      path.dataset.relIndex = i;
+      path.dataset.baseOpacity = '0.85';
+      path.style.transition = 'opacity 0.6s ease';
+      svg.appendChild(path);
+      requestAnimationFrame(()=>{ setTimeout(()=>{ path.style.opacity = path.dataset.baseOpacity; }, 500); });
+    });
+
+    // gradient def for the lines (soft orange, per brief)
+    const grad = document.createElementNS('http://www.w3.org/2000/svg','linearGradient');
+    grad.setAttribute('id','lineGrad');
+    grad.setAttribute('x1','0%'); grad.setAttribute('y1','0%');
+    grad.setAttribute('x2','100%'); grad.setAttribute('y2','0%');
+    grad.innerHTML = `
+      <stop offset="0%" stop-color="#e8a857"/>
+      <stop offset="100%" stop-color="#f3c489"/>
+    `;
+    svg.querySelector('defs').appendChild(grad);
+  }
+
+  // ===================== INTERACTIVE SELECTION =====================
+  let selectedTable = null;
+
+  function clearHighlights(){
+    document.querySelectorAll('.card').forEach(c => c.classList.remove('is-active','is-connected','is-dim'));
+    document.querySelectorAll('.connectors path').forEach(p => p.classList.remove('is-active-line','is-dim-line'));
+    document.querySelectorAll('.field').forEach(f => f.classList.remove('field-highlight'));
+    document.body.classList.remove('has-selection');
+  }
+
+  function applySelection(tableId){
+    clearHighlights();
+    selectedTable = tableId;
+    if (!tableId) return;
+
+    document.body.classList.add('has-selection');
+
+    const relatedIdx = [];
+    const connected = new Set();
+    rels.forEach((r, i) => {
+      if (r.from === tableId || r.to === tableId) {
+        relatedIdx.push(i);
+        connected.add(r.from === tableId ? r.to : r.from);
+      }
+    });
+
+    document.querySelectorAll('.card').forEach(c => {
+      if (c.id === tableId) c.classList.add('is-active');
+      else if (connected.has(c.id)) c.classList.add('is-connected');
+      else c.classList.add('is-dim');
+    });
+
+    document.querySelectorAll('.connectors path').forEach(p => {
+      const idx = parseInt(p.dataset.relIndex, 10);
+      p.classList.add(relatedIdx.includes(idx) ? 'is-active-line' : 'is-dim-line');
+    });
+
+    // Light up the exact PK <-> FK pair for every relationship touching this table
+    rels.forEach(r => {
+      let sourceId, targetId;
+      if (r.from === tableId) { sourceId = r.from; targetId = r.to; }
+      else if (r.to === tableId) { sourceId = r.from; targetId = r.to; }
+      else return;
+
+      const fkRow = document.querySelector('#' + sourceId + ' .fk-row[data-ref="' + targetId + '"]');
+      if (fkRow) fkRow.classList.add('field-highlight');
+
+      const pkRow = document.querySelector('#' + targetId + ' .pk-row');
+      if (pkRow) pkRow.classList.add('field-highlight');
+    });
+  }
+
+  function toggleSelect(tableId){
+    applySelection(selectedTable === tableId ? null : tableId);
+  }
+
+  function initInteractivity(){
+    document.querySelectorAll('.card-header, .field.pk-row').forEach(el => {
+      el.addEventListener('click', e => {
+        e.stopPropagation();
+        toggleSelect(el.closest('.card').id);
+      });
+    });
+
+    document.querySelectorAll('.field.fk-row').forEach(el => {
+      el.addEventListener('click', e => {
+        e.stopPropagation();
+        const ref = el.dataset.ref;
+        if (ref) toggleSelect(ref);
+      });
+    });
+
+    document.getElementById('stage').addEventListener('click', () => applySelection(null));
+  }
+
+  window.addEventListener('load', () => {
+    draw();
+    initInteractivity();
+  });
+  window.addEventListener('resize', () => {
+    draw();
+    if (selectedTable) applySelection(selectedTable);
+  });
+</script>
+
+</body>
+</html>
